@@ -117,7 +117,10 @@ const FundingRateTable: React.FC<Props> = ({ data }) => {
         />
       </div>
 
-      <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
+      <div
+        className="funding-rates-section"
+        style={{ display: "flex", gap: "20px", marginTop: "20px" }}
+      >
         {/* Positive Funding Rates Section */}
         <div style={{ flex: 1 }}>
           <h3 style={{ color: "limegreen" }}>

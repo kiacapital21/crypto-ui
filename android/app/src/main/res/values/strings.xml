@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">crypto-app</string>
+    <string name="title_activity_main">crypto-app</string>
+    <string name="package_name">com.kund.app</string>
+    <string name="custom_url_scheme">com.kund.app</string>
+</resources>
