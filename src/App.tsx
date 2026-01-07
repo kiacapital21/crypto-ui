@@ -1,22 +1,22 @@
-import React, { useEffect, useState } from "react";
-import logo from "./logo.svg";
+// src/App.tsx
+import React, { useState } from "react";
 import "./App.css";
-import { createDeltaWebSocket, FundingRateEvent } from "./services/ws";
 import { FundingRateItem } from "./types/FundingRate";
-import FundingRateTable from "./components/FundingRateTable";
-import BinanceFundingRate from "./services/binance-ws";
+import FundingTabs from "./components/FundingTabs";
+import { useBinanceFundingRates } from "./services/binance-ws";
+import { createDeltaWebSocket, FundingRateEvent } from "./services/ws";
 
 function App() {
-  const [data, setData] = useState<FundingRateItem[]>([]);
+  const [deltaData, setDeltaData] = useState<FundingRateItem[]>([]);
+  const binanceData = useBinanceFundingRates();
 
-  useEffect(() => {
+  React.useEffect(() => {
     const ws = createDeltaWebSocket((incoming: FundingRateEvent) => {
-      setData((prev) => {
+      setDeltaData((prev) => {
         const found = prev.find((p) => p.symbol === incoming.symbol);
         const fundingRate = incoming.funding_rate;
 
         if (found) {
-          // update existing
           return prev.map((p) =>
             p.symbol === incoming.symbol
               ? {
@@ -28,26 +28,17 @@ function App() {
           );
         }
 
-        // new symbol
         return [
           ...prev,
-          {
-            symbol: incoming.symbol,
-            fundingRate,
-            highlight: true,
-          },
+          { symbol: incoming.symbol, fundingRate, highlight: true },
         ];
       });
     });
 
     return () => ws.close();
   }, []);
-  return (
-    <div>
-      <BinanceFundingRate />
-      <FundingRateTable data={data} />
-    </div>
-  );
+
+  return <FundingTabs deltaData={deltaData} binanceData={binanceData} />;
 }
 
 export default App;

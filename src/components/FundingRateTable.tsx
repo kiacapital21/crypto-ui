@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { FundingRateItem } from "../types/FundingRate";
 import { clearTradingSymbol, setTradingSymbol } from "../services/ws";
 import "./FundingRateTable.css";
+import styled from "styled-components";
 
 interface Props {
   data: FundingRateItem[];
@@ -43,6 +44,10 @@ const FundingRateTable: React.FC<Props> = ({ data }) => {
     }
   };
 
+  const [selectedTab, setSelectedTab] = useState<"positive" | "negative">(
+    "negative"
+  );
+
   const filtered = data.filter((item) =>
     item.symbol.toLowerCase().includes(search.toLowerCase())
   );
@@ -69,16 +74,14 @@ const FundingRateTable: React.FC<Props> = ({ data }) => {
 
   return (
     <div className="card">
-      <h2>📊 Live Funding Rates</h2>
-
       {/* Selected Symbol Section */}
       {selectedSymbol && selectedData && (
         <div className="selected-symbol-section">
           <div className="selected-symbol-header">
             📍 Selected Symbol for Trading
           </div>
+          <div className="selected-symbol-name">{selectedSymbol}</div>
           <div className="selected-symbol-content">
-            <div className="selected-symbol-name">{selectedSymbol}</div>
             <div
               className={`selected-symbol-rate ${
                 selectedData.fundingRate >= 0 ? "positive" : "negative"
@@ -116,131 +119,188 @@ const FundingRateTable: React.FC<Props> = ({ data }) => {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
-
-      <div
-        className="funding-rates-section"
-        style={{ display: "flex", gap: "20px", marginTop: "20px" }}
-      >
-        {/* Positive Funding Rates Section */}
-        <div style={{ flex: 1 }}>
-          <h3 style={{ color: "limegreen" }}>
-            ✅ Positive Funding Rates ({sortedPositive.length})
-          </h3>
-
-          <select
-            value={posSort}
-            onChange={(e) => setPosSort(e.target.value as any)}
-            style={{ marginBottom: "10px", width: "100%" }}
+      <StyledTabs>
+        <StyledTab
+          style={{ color: "red" }}
+          className={`tab ${selectedTab === "negative" ? "active" : ""}`}
+          onClick={() => setSelectedTab("negative")}
+        >
+          Negative
+          <span
+            style={{
+              color: "red",
+              borderRadius: "12px",
+              marginLeft: "6px",
+              backgroundColor: "#e0f7ff",
+              padding: "2px 8px",
+              fontSize: "16px",
+            }}
           >
-            <option value="none">Sort</option>
-            <option value="high">Highest Rate</option>
-            <option value="low">Lowest Rate</option>
-          </select>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Symbol</th>
-                <th>Funding Rate</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedPositive.map((item) => (
-                <tr
-                  key={item.symbol}
-                  className={item.highlight ? "highlight" : ""}
-                >
-                  <td>{item.symbol}</td>
-                  <td style={{ color: "limegreen" }}>
-                    {item.fundingRate.toFixed(4)}%
-                  </td>
-                  <td>
-                    <button
-                      className={`select-btn ${
-                        selectedSymbol === item.symbol ? "selected" : ""
-                      }`}
-                      onClick={() => handleSelectSymbol(item.symbol)}
-                      disabled={isLoading}
-                      title="Select symbol for trading"
-                    >
-                      {isLoading && selectedSymbol === item.symbol
-                        ? "⏳"
-                        : "📤"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {sortedPositive.length === 0 && (
-            <p style={{ textAlign: "center", color: "#999" }}>
-              No positive funding rates
-            </p>
-          )}
-        </div>
-
-        {/* Negative Funding Rates Section */}
-        <div style={{ flex: 1 }}>
-          <h3 style={{ color: "red" }}>
-            ❌ Negative Funding Rates ({sortedNegative.length})
-          </h3>
-
-          <select
-            value={negSort}
-            onChange={(e) => setNegSort(e.target.value as any)}
-            style={{ marginBottom: "10px", width: "100%" }}
+            {sortedNegative.length}
+          </span>
+        </StyledTab>
+        <StyledTab
+          style={{ color: "limegreen" }}
+          className={`tab ${selectedTab === "positive" ? "active" : ""}`}
+          onClick={() => setSelectedTab("positive")}
+        >
+          Positive
+          <span
+            style={{
+              color: "limegreen",
+              borderRadius: "12px",
+              marginLeft: "6px",
+              backgroundColor: "#e0f7ff",
+              padding: "2px 8px",
+              fontSize: "16px",
+            }}
           >
-            <option value="none">Sort</option>
-            <option value="high">Highest Rate</option>
-            <option value="low">Lowest Rate</option>
-          </select>
+            {sortedPositive.length}
+          </span>
+        </StyledTab>
+      </StyledTabs>
+      <div className="tab-content">
+        {selectedTab === "positive" && (
+          <div className="tab-panel">
+            <select
+              value={posSort}
+              onChange={(e) => setPosSort(e.target.value as any)}
+              style={{ marginBottom: "10px", width: "100%" }}
+            >
+              <option value="none">Sort</option>
+              <option value="high">Highest Rate</option>
+              <option value="low">Lowest Rate</option>
+            </select>
 
-          <table>
-            <thead>
-              <tr>
-                <th>Symbol</th>
-                <th>Funding Rate</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedNegative.map((item) => (
-                <tr
-                  key={item.symbol}
-                  className={item.highlight ? "highlight" : ""}
-                >
-                  <td>{item.symbol}</td>
-                  <td style={{ color: "red" }}>
-                    {item.fundingRate.toFixed(4)}%
-                  </td>
-                  <td>
-                    <button
-                      className={`select-btn ${
-                        selectedSymbol === item.symbol ? "selected" : ""
-                      }`}
-                      onClick={() => handleSelectSymbol(item.symbol)}
-                      disabled={isLoading}
-                      title="Select symbol for trading"
-                    >
-                      {isLoading && selectedSymbol === item.symbol
-                        ? "⏳"
-                        : "📤"}
-                    </button>
-                  </td>
+            <table>
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Funding Rate</th>
+                  <th>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {sortedNegative.length === 0 && (
-            <p style={{ textAlign: "center", color: "#999" }}>
-              No negative funding rates
-            </p>
-          )}
-        </div>
+              </thead>
+              <tbody>
+                {sortedPositive.map((item) => (
+                  <tr
+                    key={item.symbol}
+                    className={item.highlight ? "highlight" : ""}
+                  >
+                    <td>{item.symbol}</td>
+                    <td style={{ color: "limegreen" }}>
+                      {item.fundingRate.toFixed(4)}%
+                    </td>
+                    <td>
+                      <button
+                        className={`select-btn ${
+                          selectedSymbol === item.symbol ? "selected" : ""
+                        }`}
+                        onClick={() => handleSelectSymbol(item.symbol)}
+                        disabled={isLoading}
+                        title="Select symbol for trading"
+                      >
+                        {isLoading && selectedSymbol === item.symbol
+                          ? "⏳"
+                          : "📤"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {sortedPositive.length === 0 && (
+              <p style={{ textAlign: "center", color: "#999" }}>
+                No positive funding rates
+              </p>
+            )}
+          </div>
+        )}
+        {selectedTab === "negative" && (
+          <div className="tab-panel">
+            <select
+              value={negSort}
+              onChange={(e) => setNegSort(e.target.value as any)}
+              style={{ marginBottom: "10px", width: "100%" }}
+            >
+              <option value="none">Sort</option>
+              <option value="high">Highest Rate</option>
+              <option value="low">Lowest Rate</option>
+            </select>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Funding Rate</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedNegative.map((item) => (
+                  <tr
+                    key={item.symbol}
+                    className={item.highlight ? "highlight" : ""}
+                  >
+                    <td>{item.symbol}</td>
+                    <td style={{ color: "red" }}>
+                      {item.fundingRate.toFixed(4)}%
+                    </td>
+                    <td>
+                      <button
+                        className={`select-btn ${
+                          selectedSymbol === item.symbol ? "selected" : ""
+                        }`}
+                        onClick={() => handleSelectSymbol(item.symbol)}
+                        disabled={isLoading}
+                        title="Select symbol for trading"
+                      >
+                        {isLoading && selectedSymbol === item.symbol
+                          ? "⏳"
+                          : "📤"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {sortedNegative.length === 0 && (
+              <p style={{ textAlign: "center", color: "#999" }}>
+                No negative funding rates
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+const StyledTabs = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 10px;
+  border-radius: 8px;
+`;
+
+const StyledTab = styled.button`
+  /* Add your CSS styles for the tab here */
+  padding: 10px 20px;
+  background-color: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: #e5e5e575;
+    border-radius: 8px;
+  }
+
+  &.active {
+    color: #4cc9f0;
+  }
+`;
 
 export default FundingRateTable;

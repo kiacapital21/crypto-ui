@@ -7,6 +7,8 @@ export interface FundingRateEvent {
 
 export type FundingRateCallback = (data: FundingRateEvent) => void;
 
+const DELTA_EXCHANGE_API = "http://43.204.27.12/delta-exchange/";
+
 export function createDeltaWebSocket(
   onFundingRate: FundingRateCallback
 ): WebSocket {
@@ -76,16 +78,13 @@ export function createDeltaWebSocket(
 // API function to set the trading symbol
 export async function setTradingSymbol(symbol: string): Promise<void> {
   try {
-    const response = await fetch(
-      "http://43.204.27.12/delta-exchange/set-crypto",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ symbol }),
-      }
-    );
+    const response = await fetch(DELTA_EXCHANGE_API + "set-crypto", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ symbol }),
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to set trading symbol: ${response.statusText}`);
@@ -100,15 +99,12 @@ export async function setTradingSymbol(symbol: string): Promise<void> {
 
 export async function clearTradingSymbol(): Promise<void> {
   try {
-    const response = await fetch(
-      "http://43.204.27.12/delta-exchange/clear-crypto",
-      {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await fetch(DELTA_EXCHANGE_API + "clear-crypto", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to clear trading symbol: ${response.statusText}`);

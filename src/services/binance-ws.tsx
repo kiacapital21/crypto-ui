@@ -1,107 +1,106 @@
-import React, { useEffect, useMemo, useState } from "react";
+// src/services/binance-ws.ts
+import { useEffect, useState } from "react";
 
-interface FundingRateUpdateItem {
-  s: string; // Symbol
-  r: string; // Funding rate
-  T: number;
+export interface BinanceFundingRateItem {
+  symbol: string;
+  fundingRate: number;
 }
 
-const BinanceAllFundingRates: React.FC = () => {
-  const [fundingRates, setFundingRates] = useState<Record<string, number>>({});
-  const [status, setStatus] = useState("Connecting...");
+const REST_URL = "https://fapi.binance.com/fapi/v1/exchangeInfo";
+const WS_BASE = "wss://fstream.binance.com/stream?streams=";
+const BINANCE_API = "http://43.204.27.12/binance/";
 
-  const streamUrl = "wss://fstream.binance.com/ws/!fundingRate@arr";
+export function useBinanceFundingRates() {
+  const [data, setData] = useState<BinanceFundingRateItem[]>([]);
 
   useEffect(() => {
-    const ws = new WebSocket(streamUrl);
+    let alive = true;
 
-    ws.onopen = () => setStatus("Connected");
+    const init = async () => {
+      const res = await fetch(REST_URL);
+      const json = await res.json();
 
-    ws.onmessage = (event) => {
-      const updates: FundingRateUpdateItem[] = JSON.parse(event.data);
+      const symbols = json.symbols
+        .filter(
+          (s: any) =>
+            s.contractType === "PERPETUAL" &&
+            s.quoteAsset === "USDT" &&
+            s.status === "TRADING"
+        )
+        .map((s: any) => s.symbol.toLowerCase());
 
-      if (Array.isArray(updates)) {
-        setFundingRates((prev) => {
-          const next = { ...prev };
-          updates.forEach((u) => {
-            next[u.s] = parseFloat(u.r) * 100; // store %
-          });
-          return next;
+      const streams = symbols.map((s: string) => `${s}@markPrice@1s`).join("/");
+      const ws = new WebSocket(WS_BASE + streams);
+
+      ws.onmessage = (e) => {
+        if (!alive) return;
+        const msg = JSON.parse(e.data);
+        const d = msg?.data;
+        if (!d?.s) return;
+
+        const symbol = d.s.toLowerCase();
+        const fundingRate = Number(d.r) * 100;
+
+        setData((prev) => {
+          const existing = prev.find((p) => p.symbol === symbol);
+          if (existing) {
+            return prev.map((p) =>
+              p.symbol === symbol ? { ...p, fundingRate } : p
+            );
+          }
+          return [...prev, { symbol, fundingRate }];
         });
-      }
+      };
     };
 
-    ws.onclose = () => setStatus("Disconnected");
-    ws.onerror = () => setStatus("Error");
+    init();
 
-    return () => ws.close();
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  // 🔥 Find extremes
-  const { highestPositive, lowestNegative } = useMemo(() => {
-    let max = -Infinity;
-    let min = Infinity;
+  return data;
+}
 
-    Object.values(fundingRates).forEach((rate) => {
-      if (rate > max) max = rate;
-      if (rate < min) min = rate;
+export async function setTradingSymbol(symbol: string): Promise<void> {
+  try {
+    symbol = symbol.toUpperCase();
+    const response = await fetch(BINANCE_API + "set-crypto", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ symbol }),
     });
 
-    return {
-      highestPositive: max > 0 ? max : null,
-      lowestNegative: min < 0 ? min : null,
-    };
-  }, [fundingRates]);
+    if (!response.ok) {
+      throw new Error(`Failed to set trading symbol: ${response.statusText}`);
+    }
 
-  return (
-    <div style={{ padding: 20 }}>
-      <h2>Binance Funding Rates</h2>
-      <p>
-        Status: <strong>{status}</strong>
-      </p>
+    console.log(`Trading symbol set to: ${symbol}`);
+  } catch (error) {
+    console.error("Error setting trading symbol:", error);
+    throw error;
+  }
+}
 
-      <table>
-        <thead>
-          <tr>
-            <th>Symbol</th>
-            <th>Funding Rate</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(fundingRates).map(([symbol, rate]) => {
-            const isMax = rate === highestPositive;
-            const isMin = rate === lowestNegative;
+export async function clearTradingSymbol(): Promise<void> {
+  try {
+    const response = await fetch(BINANCE_API + "clear-crypto", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-            return (
-              <tr
-                key={symbol}
-                style={{
-                  backgroundColor: isMax
-                    ? "#d4f8d4" // green
-                    : isMin
-                    ? "#ffd6d6" // red
-                    : "transparent",
-                  fontWeight: isMax || isMin ? "bold" : "normal",
-                }}
-              >
-                <td>{symbol}</td>
-                <td style={{ color: rate >= 0 ? "green" : "red" }}>
-                  {rate.toFixed(4)}%
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    if (!response.ok) {
+      throw new Error(`Failed to clear trading symbol: ${response.statusText}`);
+    }
 
-      <p style={{ marginTop: 10 }}>
-        🟢 Highest Positive:{" "}
-        {highestPositive !== null ? highestPositive.toFixed(4) + "%" : "N/A"} |
-        🔴 Highest Negative:{" "}
-        {lowestNegative !== null ? lowestNegative.toFixed(4) + "%" : "N/A"}
-      </p>
-    </div>
-  );
-};
-
-export default BinanceAllFundingRates;
+    console.log("Trading symbol cleared");
+  } catch (error) {
+    console.error("Error clearing trading symbol:", error);
+    throw error;
+  }
+}
