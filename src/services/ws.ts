@@ -7,7 +7,8 @@ export interface FundingRateEvent {
 
 export type FundingRateCallback = (data: FundingRateEvent) => void;
 
-const DELTA_EXCHANGE_API = "http://43.204.27.12/delta-exchange/";
+// const DELTA_EXCHANGE_API = "http://43.204.27.12/delta-exchange/";
+const DELTA_EXCHANGE_API = "http://localhost:3001/delta-exchange/";
 
 export function createDeltaWebSocket(
   onFundingRate: FundingRateCallback
@@ -113,6 +114,88 @@ export async function clearTradingSymbol(): Promise<void> {
     console.log("Trading symbol cleared");
   } catch (error) {
     console.error("Error clearing trading symbol:", error);
+    throw error;
+  }
+}
+
+export async function stopService() {
+  try {
+    const response = await fetch(DELTA_EXCHANGE_API + "stop-service", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to stop service: ${response.statusText}`);
+    }
+
+    console.log("Service stopped");
+  } catch (error) {
+    console.error("Error stopping service:", error);
+    throw error;
+  }
+}
+
+export async function startService() {
+  try {
+    const response = await fetch(DELTA_EXCHANGE_API + "start-service", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to start service: ${response.statusText}`);
+    }
+
+    console.log("Service started");
+  } catch (error) {
+    console.error("Error starting service:", error);
+    throw error;
+  }
+}
+
+export async function getServiceStatus() {
+  try {
+    const response = await fetch(DELTA_EXCHANGE_API + "status", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to start service: ${response.statusText}`);
+    }
+    console.log("Service started");
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error starting service:", error);
+    throw error;
+  }
+}
+
+export async function getCrypto() {
+  try {
+    const response = await fetch(DELTA_EXCHANGE_API + "get-crypto", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to start service: ${response.statusText}`);
+    }
+    console.log("Service started");
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error starting service:", error);
     throw error;
   }
 }

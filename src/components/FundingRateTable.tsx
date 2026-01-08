@@ -1,21 +1,29 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FundingRateItem } from "../types/FundingRate";
-import { clearTradingSymbol, setTradingSymbol } from "../services/ws";
+import {
+  clearTradingSymbol,
+  getCrypto,
+  getServiceStatus,
+  setTradingSymbol,
+  startService,
+  stopService,
+} from "../services/ws";
 import "./FundingRateTable.css";
 import styled from "styled-components";
+import Toggle from "./Toggle";
 
 interface Props {
   data: FundingRateItem[];
 }
 
 const FundingRateTable: React.FC<Props> = ({ data }) => {
+  const [enabled, setEnabled] = useState(false);
   const [search, setSearch] = useState("");
   const [posSort, setPosSort] = useState<"none" | "high" | "low">("high");
   const [negSort, setNegSort] = useState<"none" | "high" | "low">("low");
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const handleSelectSymbol = async (symbol: string) => {
     setIsLoading(true);
     setError(null);
@@ -70,7 +78,75 @@ const FundingRateTable: React.FC<Props> = ({ data }) => {
   const sortedNegative = sortData(negative, negSort);
 
   // Get the selected symbol's current funding rate
-  const selectedData = data.find((item) => item.symbol === selectedSymbol);
+  // const selectedData = data.find((item) => item.symbol === selectedSymbol);
+
+  const handleServiceStatus = async (isEnabled: boolean) => {
+    try {
+      if (isEnabled) {
+        await startService();
+      } else {
+        await stopService();
+      }
+      handleEnabled(await getServiceStatus());
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleEnabled = (
+    serviceStatus: { cron: any[] | null | undefined } | null
+  ) => {
+    setEnabled(
+      serviceStatus != null &&
+        serviceStatus.cron != null &&
+        serviceStatus.cron != undefined &&
+        serviceStatus.cron.length > 0 &&
+        serviceStatus.cron.filter((cron) => cron.running).length > 0
+    );
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const serviceStatus = await getServiceStatus();
+        console.log("Service status:", serviceStatus.cron.length);
+        handleEnabled(serviceStatus);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchData();
+
+    // Clean up function, if needed
+    return () => {
+      // Cleanup logic here, if any
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const crypto = await getCrypto();
+        setSelectedSymbol(crypto.symbol);
+        console.log("Crypto:", crypto);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchData();
+
+    // Clean up function, if needed
+    return () => {
+      // Cleanup logic here, if any
+    };
+  }, []);
+
+  const selectedData = useMemo(() => {
+    if (!selectedSymbol || !data?.length) return null;
+    return data.find((item) => item.symbol === selectedSymbol) || null;
+  }, [selectedSymbol, data]);
 
   return (
     <div className="card">
@@ -107,8 +183,20 @@ const FundingRateTable: React.FC<Props> = ({ data }) => {
         </div>
       )}
 
-      <div style={{ textAlign: "center", marginBottom: "20px" }}>
-        Displaying: {filtered.length}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: "10px",
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+          Displaying: {filtered.length}
+        </div>
+        <div style={{ display: "flex" }}>
+          <span style={{ paddingInlineEnd: "10px" }}>Enable Auto Trading</span>
+          <Toggle checked={enabled} onChange={handleServiceStatus} />
+        </div>
       </div>
 
       <div className="controls">

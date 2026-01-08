@@ -8,7 +8,8 @@ export interface BinanceFundingRateItem {
 
 const REST_URL = "https://fapi.binance.com/fapi/v1/exchangeInfo";
 const WS_BASE = "wss://fstream.binance.com/stream?streams=";
-const BINANCE_API = "http://43.204.27.12/binance/";
+// const BINANCE_API = "http://43.204.27.12/binance/";
+const BINANCE_API = "http://localhost:3001/binance/";
 
 export function useBinanceFundingRates() {
   const [data, setData] = useState<BinanceFundingRateItem[]>([]);
@@ -101,6 +102,88 @@ export async function clearTradingSymbol(): Promise<void> {
     console.log("Trading symbol cleared");
   } catch (error) {
     console.error("Error clearing trading symbol:", error);
+    throw error;
+  }
+}
+
+export async function stopService() {
+  try {
+    const response = await fetch(BINANCE_API + "stop-service", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to stop service: ${response.statusText}`);
+    }
+
+    console.log("Service stopped");
+  } catch (error) {
+    console.error("Error stopping service:", error);
+    throw error;
+  }
+}
+
+export async function startService() {
+  try {
+    const response = await fetch(BINANCE_API + "start-service", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to start service: ${response.statusText}`);
+    }
+
+    console.log("Service started");
+  } catch (error) {
+    console.error("Error starting service:", error);
+    throw error;
+  }
+}
+
+export async function getServiceStatus() {
+  try {
+    const response = await fetch(BINANCE_API + "status", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to start service: ${response.statusText}`);
+    }
+    console.log("Service started");
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error starting service:", error);
+    throw error;
+  }
+}
+
+export async function getCrypto() {
+  try {
+    const response = await fetch(BINANCE_API + "get-crypto", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to start service: ${response.statusText}`);
+    }
+    console.log("Service started");
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error starting service:", error);
     throw error;
   }
 }

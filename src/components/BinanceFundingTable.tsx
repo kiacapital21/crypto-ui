@@ -4,8 +4,14 @@ import styled from "styled-components";
 import {
   BinanceFundingRateItem,
   clearTradingSymbol,
+  getCrypto,
+  getServiceStatus,
   setTradingSymbol,
+  startService,
+  stopService,
 } from "../services/binance-ws";
+import Toggle from "./Toggle";
+import { start } from "repl";
 
 const Card = styled.div`
   background: #0b0f1a;
@@ -49,6 +55,7 @@ interface Props {
 }
 
 const BinanceFundingTable: React.FC<Props> = ({ data }) => {
+  const [enabled, setEnabled] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [tab, setTab] = useState<"positive" | "negative">("negative");
@@ -62,7 +69,7 @@ const BinanceFundingTable: React.FC<Props> = ({ data }) => {
 
     try {
       await setTradingSymbol(symbol);
-      setSelectedSymbol(symbol);
+      setSelectedSymbol(symbol.toLowerCase());
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to set trading symbol"
@@ -83,11 +90,56 @@ const BinanceFundingTable: React.FC<Props> = ({ data }) => {
       console.error("Error clearing trading symbol:", err);
     }
   };
+
+  const handleServiceStatus = async (isEnabled: boolean) => {
+    try {
+      if (isEnabled) {
+        await startService();
+      } else {
+        await stopService();
+      }
+      handleEnabled(await getServiceStatus());
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleEnabled = (
+    serviceStatus: { cron: any[] | null | undefined } | null
+  ) => {
+    setEnabled(
+      serviceStatus != null &&
+        serviceStatus.cron != null &&
+        serviceStatus.cron != undefined &&
+        serviceStatus.cron.length > 0 &&
+        serviceStatus.cron.filter((cron) => cron.running).length > 0
+    );
+  };
+
   const filteredData = useMemo(
     () =>
       data.filter((r) => r.symbol.toLowerCase().includes(search.toLowerCase())),
     [data, search]
   );
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const serviceStatus = await getServiceStatus();
+        console.log("Service status:", serviceStatus.cron.length);
+        handleEnabled(serviceStatus);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchData();
+
+    // Clean up function, if needed
+    return () => {
+      // Cleanup logic here, if any
+    };
+  }, []);
 
   useEffect(() => {
     if (tab === "positive") setSort("high"); // default: highest first
@@ -118,7 +170,34 @@ const BinanceFundingTable: React.FC<Props> = ({ data }) => {
 
   const negativeCount = filteredData.filter((r) => r.fundingRate < 0).length;
   const positiveCount = filteredData.filter((r) => r.fundingRate >= 0).length;
-  const selectedData = data.find((item) => item.symbol === selectedSymbol);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const crypto = await getCrypto();
+        setSelectedSymbol(crypto.symbol);
+        console.log("Crypto:", crypto);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchData();
+
+    // Clean up function, if needed
+    return () => {
+      // Cleanup logic here, if any
+    };
+  }, []);
+
+  const selectedData = useMemo(() => {
+    console.log("Selected Symbol:", selectedSymbol);
+    if (!selectedSymbol || !data?.length) return null;
+    return (
+      data.find(
+        (item) => item.symbol.toLowerCase() === selectedSymbol.toLowerCase()
+      ) || null
+    );
+  }, [selectedSymbol, data]);
   return (
     <div className="card">
       {/* Selected Symbol Section */}
@@ -155,9 +234,22 @@ const BinanceFundingTable: React.FC<Props> = ({ data }) => {
           <button onClick={() => setError(null)}>✕</button>
         </div>
       )}
-      <div style={{ textAlign: "center", marginBottom: "20px" }}>
-        Displaying: {filteredData.length}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: "10px",
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+          Displaying: {filteredData.length}
+        </div>
+        <div style={{ display: "flex" }}>
+          <span style={{ paddingInlineEnd: "10px" }}>Enable Auto Trading</span>
+          <Toggle checked={enabled} onChange={handleServiceStatus} />
+        </div>
       </div>
+
       <input
         placeholder="Search symbol..."
         value={search}
@@ -210,7 +302,7 @@ const BinanceFundingTable: React.FC<Props> = ({ data }) => {
               <Td>
                 <button
                   className={`select-btn ${
-                    selected === r.symbol ? "selected" : ""
+                    selectedSymbol?.toLowerCase() === r.symbol ? "selected" : ""
                   }`}
                   onClick={() => handleSelectSymbol(r.symbol)}
                   disabled={isLoading}
